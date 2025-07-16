@@ -8,15 +8,18 @@ use Sinemah\CouchEloquent\Client\Document;
 use Sinemah\CouchEloquent\Client\Connection;
 use Sinemah\CouchEloquent\Eloquent\Traits\HasAttributes;
 use Sinemah\CouchEloquent\Query\Builder as QueryBuilder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 abstract class Model
 {
     use HasAttributes;
 
     protected Collection $collection;
+    public string $database;
 
     private ?string $_id = null;
     private ?string $_rev = null;
+    public ?string $id = null;
 
     private QueryBuilder $builder;
 
@@ -38,6 +41,7 @@ abstract class Model
     public function setId(string $id): void
     {
         $this->_id = $id;
+        $this->id = $id;
     }
 
     public function setRevision(string $rev): void
@@ -79,7 +83,7 @@ abstract class Model
             '_rev' => $this->_rev,
         ]);
 
-        if($doc->find()) {
+        if ($doc->find()) {
             return $doc->update($this->toCastedArray());
         }
 

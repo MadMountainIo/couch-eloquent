@@ -2,6 +2,7 @@
 
 namespace Sinemah\CouchEloquent\Client;
 
+use Exception;
 use Illuminate\Support\Arr;
 
 class Document
@@ -34,9 +35,9 @@ class Document
         return $this->rev;
     }
 
-    public function find(): bool
+    public function find(string $database): bool
     {
-        $doc = $this->builder->find($this->values['_id'] ?? null) ?? [];
+        $doc = $this->builder->find($database, $this->values['_id'] ?? null) ?? [];
 
         $this->values = array_merge(
             $this->values,
@@ -46,9 +47,9 @@ class Document
         return count($doc) > 0;
     }
 
-    public function create(): bool
+    public function create(string $database): bool
     {
-        if($values = $this->builder->create($this->toArray())) {
+        if ($values = $this->builder->create($database, $this->toArray())) {
             $this->values = $values;
             $this->id = $values['_id'];
             $this->rev = $values['_rev'];
@@ -59,11 +60,11 @@ class Document
         return false;
     }
 
-    public function update(array $payload = []): bool
+    public function update(string $database, array $payload = []): bool
     {
         $this->values = $payload;
 
-        if($values = $this->builder->update($this->id(), $this->toArray())) {
+        if ($values = $this->builder->update($database, $this->id(), $this->toArray())) {
             $this->values = $values;
             $this->rev = $values['_rev'];
 
@@ -73,9 +74,9 @@ class Document
         return false;
     }
 
-    public function delete(): bool
+    public function delete(string $database): bool
     {
-        return $this->builder->delete($this->id);
+        return $this->builder->delete($database, $this->id);
     }
 
     public function toArray(): array

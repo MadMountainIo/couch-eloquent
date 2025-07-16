@@ -3,6 +3,7 @@
 namespace Sinemah\CouchEloquent\Query;
 
 use Closure;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Sinemah\CouchEloquent\Client\Builder as ClientBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -43,31 +44,31 @@ class Builder
 
     public array $options = [];
 
-//    public array $operators = [
-//        '=',
-//        '<',
-//        '>',
-//        '<=',
-//        '>=',
-//        '<>',
-//        '!=',
-//        'like',
-//        'not like',
-//        'between',
-//        'ilike',
-//        'not ilike',
-//        'all',
-//        '&',
-//        '|',
-//        'exists',
-//        'type',
-//        'mod',
-//        'where',
-//        'size',
-//        'regex',
-//        'not regex',
-//        'elemmatch',
-//    ];
+    //    public array $operators = [
+    //        '=',
+    //        '<',
+    //        '>',
+    //        '<=',
+    //        '>=',
+    //        '<>',
+    //        '!=',
+    //        'like',
+    //        'not like',
+    //        'between',
+    //        'ilike',
+    //        'not ilike',
+    //        'all',
+    //        '&',
+    //        '|',
+    //        'exists',
+    //        'type',
+    //        'mod',
+    //        'where',
+    //        'size',
+    //        'regex',
+    //        'not regex',
+    //        'elemmatch',
+    //    ];
 
     protected array $operators = [
         '!' => '$ne',
@@ -95,15 +96,15 @@ class Builder
     {
         $saved = 0;
 
-        if(Arr::isAssoc($values)) {
+        if (Arr::isAssoc($values)) {
             $values = [$values];
         }
 
-        collect($values)->each(function(array $payload) use (&$saved) {
+        collect($values)->each(function (array $payload) use (&$saved) {
             $model = $this->getLoadedModel($payload, true);
             $doc = Document::load($model->toArray());
 
-            $saved += (int) $doc->create();
+            $saved += (int) $doc->create($model->database);
         });
 
         return $saved === count($values);
@@ -119,11 +120,11 @@ class Builder
         $updated = 0;
         $docs = $this->get();
 
-        collect($docs)->each(function(array $doc) use (&$updated, $values) {
-            $model =$this->getLoadedModel($doc, true);
+        collect($docs)->each(function (array $doc) use (&$updated, $values) {
+            $model = $this->getLoadedModel($doc, true);
             $doc = Document::load($model->toArray());
 
-            $updated += (int) $doc->update($values);
+            $updated += (int) $doc->update($model->database, $values);
         });
 
         return $updated === count($docs);
@@ -138,7 +139,7 @@ class Builder
     {
         $type = 'basic';
 
-        if(gettype($column) === 'object' && get_class($column) === 'Closure') {
+        if (gettype($column) === 'object' && get_class($column) === 'Closure') {
             $value = $column(new Builder($this->connection));
             $column = null;
             $type = 'nested';
@@ -146,7 +147,7 @@ class Builder
 
         $this->wheres[] = [
             'type'    => $type,
-            'operator'=> $operator,
+            'operator' => $operator,
             'column'  => $column,
             'value'   => $value,
             'boolean' => $boolean,
@@ -204,7 +205,7 @@ class Builder
     {
         $this->wheres[] = [
             'type'    => 'null',
-            'operator'=> null,
+            'operator' => null,
             'column'  => $column,
             'value'   => null,
             'boolean' => $boolean,
@@ -247,7 +248,7 @@ class Builder
     {
         $this->wheres[] = [
             'type'    => 'date',
-            'operator'=> $operator,
+            'operator' => $operator,
             'column'  => $column,
             'value'   => $value,
             'boolean' => $boolean,
@@ -277,7 +278,7 @@ class Builder
         $model = $this->getLoadedModel($values, true);
         $document = Document::load($model->toArray());
 
-        if($document->create()) {
+        if ($document->create($model->database)) {
             $model->setId($document->id());
             $model->setRevision($document->rev());
 
@@ -301,8 +302,8 @@ class Builder
     {
         $builder = ClientBuilder::withConnection();
 
-        return collect($builder->search($this->query()->toQuery()))
-            ->map(function(array $document) {
+        return collect($builder->search($this->getModel()->database, $this->query()->toQuery()))
+            ->map(function (array $document) {
                 return $this->getLoadedModel(
                     $document,
                     false,
@@ -316,11 +317,11 @@ class Builder
     {
         $deleted = 0;
         if (!is_null($id)) {
-            Document::load(['_id' => $id])->delete();
+            Document::load(['_id' => $id])->delete($this->getModel()->database);
         }
 
         $this->get()
-            ->each(function(Document $doc) use (&$deleted) {
+            ->each(function (Document $doc) use (&$deleted) {
                 $deleted += (int) $doc->delete();
             });
 
@@ -395,6 +396,15 @@ class Builder
         return $this->get()->first();
     }
 
+    public function firstOrFail(): mixed
+    {
+        $result = $this->first();
+
+        if (!$result) throw new ModelNotFoundException();
+
+        return $result;
+    }
+
     public function last(): mixed
     {
         return $this->get()->last();
@@ -419,16 +429,16 @@ class Builder
 
     private function getLoadedModel(array $document, bool $writeAccess, ?string $id = null, ?string $revision = null): Model
     {
-        $model = match($writeAccess) {
+        $model = match ($writeAccess) {
             true => $this->loadWritableModel($this->getModel(), $document),
             false => $this->loadReadableModel($this->getModel(), $document)
         };
 
-        if($id) {
+        if ($id) {
             $model->setId($id);
         }
 
-        if($revision) {
+        if ($revision) {
             $model->setRevision($revision);
         }
 
