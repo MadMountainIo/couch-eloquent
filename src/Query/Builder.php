@@ -418,6 +418,7 @@ class Builder
     public function setModel(Model $model): Builder
     {
         $this->model = $model;
+        $this->builder->setIndexes($this->model->database, $this->model->indexes);
 
         return $this;
     }

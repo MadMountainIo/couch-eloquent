@@ -175,6 +175,22 @@ class Builder
         return $endpoint;
     }
 
+    public function setIndexes(string $database, array $indexes)
+    {
+        if (empty($indexes)) return;
+
+        try {
+            $this->request()->post($this->database($database, '_index'), [
+                'index' => [
+                    'fields' => $indexes['fields'],
+                ],
+                'name' => $indexes['name']
+            ]);
+        } catch (Exception $e) {
+            var_dump($e->getMessage());
+        }
+    }
+
     public function request(): PendingRequest
     {
         return Http::withHeaders([
