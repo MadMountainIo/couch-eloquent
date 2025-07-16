@@ -2,6 +2,7 @@
 
 namespace Sinemah\CouchEloquent\Client;
 
+use Exception;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
@@ -9,11 +10,10 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Sinemah\CouchEloquent\Types\Date;
 
-class Builder {
+class Builder
+{
 
-    private function __construct(private readonly Connection $connection)
-    {
-    }
+    private function __construct(private readonly Connection $connection) {}
 
     public static function withConnection(): Builder
     {
@@ -25,34 +25,34 @@ class Builder {
         return new self($connection);
     }
 
-    public function find(string $id): ?array
+    public function find(string $database, string $id): ?array
     {
-        $response = $this->request()->get($this->database($id));
+        $response = $this->request()->get($this->database($database, $id));
 
-        if($response->successful()) {
+        if ($response->successful()) {
             return $response->json();
         }
 
         return null;
     }
 
-    public function search(?array $params=null): ?array
+    public function search(string $database, ?array $params = null): ?array
     {
         $response = match (true) {
-            $params === null => $this->findAll(),
-            is_array($params) => $this->request()->post($this->database('_find'), $params),
+            $params === null => $this->findAll($database),
+            is_array($params) => $this->request()->post($this->database($database, '_find'), $params),
         };
 
-        if($response->successful()) {
+        if ($response->successful()) {
             return $response->json('docs');
         }
 
         return null;
     }
 
-    public function findAll(): Response
+    public function findAll(string $database): Response
     {
-        return $this->request()->post($this->database('_find'), [
+        return $this->request()->post($this->database($database, '_find'), [
             'selector' => [
                 '$and' => [
                     [
@@ -65,7 +65,7 @@ class Builder {
         ]);
     }
 
-    public function create(array $values): ?array
+    public function create(string $database, array $values): ?array
     {
         $date = Date::load(now());
         $timestamps = [
@@ -74,14 +74,14 @@ class Builder {
             'deleted_at' => null,
         ];
         $response = $this->request()->put(
-            $this->database($values['id'] ?? Str::uuid()),
+            $this->database($database, $values['id'] ?? Str::uuid()),
             array_merge(
                 Arr::except($values, ['id']),
                 $timestamps,
             )
         );
 
-        if($response->json('ok')) {
+        if ($response->json('ok')) {
             return array_merge(
                 [
                     '_id' => $response->json('id'),
@@ -95,7 +95,7 @@ class Builder {
         return null;
     }
 
-    public function update(string $id, array $values): ?array
+    public function update(string $database, string $id, array $values): ?array
     {
         $date = Date::load(now());
         $document = $this->find($id);
@@ -112,9 +112,9 @@ class Builder {
             $timestamps
         );
 
-        $response = $this->request()->put($this->database($id), $values);
+        $response = $this->request()->put($this->database($database, $id), $values);
 
-        if($response->json('ok')) {
+        if ($response->json('ok')) {
             return array_merge(
                 [
                     '_id' => $response->json('_id'),
@@ -128,16 +128,16 @@ class Builder {
         return null;
     }
 
-    public function delete(string $id): bool
+    public function delete(string $database, string $id): bool
     {
         $document = $this->find($id);
 
-        $response = $this->request()->delete($this->database($id) . '?' . Arr::query(['rev' => $document['_rev'] ?? null]));
+        $response = $this->request()->delete($this->database($database, $id) . '?' . Arr::query(['rev' => $document['_rev'] ?? null]));
 
         return $response->json('ok', false);
     }
 
-    public function softDelete(string $id): bool
+    public function softDelete(string $database, string $id): bool
     {
         $date = Date::load(now());
         $document = $this->find($id);
@@ -148,7 +148,7 @@ class Builder {
         ];
 
         $response = $this->request()->put(
-            $this->database($id),
+            $this->database($database, $id),
             array_merge(
                 $document,
                 $timestamps,
@@ -159,16 +159,20 @@ class Builder {
         return $response->json('ok', false);
     }
 
-    public function database(?string $endpoint=null): string
+    public function database(string $database, ?string $endpoint = null): string
     {
         $idLength = strlen((string) $endpoint);
-        $count = (int) round($idLength/($idLength + 1));
+        $count = (int) round($idLength / ($idLength + 1));
 
-        return collect(array_slice(
-            [config('couchdb.url'), config('couchdb.database'), $endpoint],
+        $this->ensureDatabaseExists($database);
+
+        $endpoint = collect(array_slice(
+            [config('couchdb.url'), $database, $endpoint],
             0,
             2 + $count
         ))->implode('/');
+
+        return $endpoint;
     }
 
     public function request(): PendingRequest
@@ -185,10 +189,23 @@ class Builder {
         $key = 'rows';
 
 
-        if(is_array($params)) {
+        if (is_array($params)) {
             $key = 'docs';
         }
 
         return $response->json($key);
+    }
+
+    /**
+     * Trying to force create database - it triggers error when db exists
+     * @param string $database
+     */
+    private function ensureDatabaseExists(string $database): void
+    {
+        try {
+            $this->request()->put(sprintf('%s/%s', config('couchdb.url'), $database));
+        } catch (Exception $e) {
+            var_dump($e->getMessage());
+        }
     }
 }

@@ -48,8 +48,8 @@ trait HasAttributes
 
     public function __get($name): mixed
     {
-        if(array_key_exists($name, $this->attributes)) {
-//            return $this->setAttribute($name, $this->attributes[$name] ?? null);
+        if (array_key_exists($name, $this->attributes)) {
+            //            return $this->setAttribute($name, $this->attributes[$name] ?? null);
             return $this->attributes[$name];
         }
 
@@ -68,8 +68,9 @@ trait HasAttributes
 
     public function castAttribute(string $key, mixed $value): mixed
     {
-        if($castType = $this->getCastType($key)) {
-            $value = match($castType) {
+
+        if ($castType = $this->getCastType($key)) {
+            $value = match ($castType) {
                 'int', 'integer' => (int) $value,
                 'real', 'float', 'double' => $this->fromFloat($value),
                 'decimal' => $this->asDecimal($value, explode(':', $this->getCasts()[$key], 2)[1]),
@@ -92,8 +93,8 @@ trait HasAttributes
 
     public function setAttribute(string $key, mixed $value): mixed
     {
-        if($castType = $this->getCastType($key)) {
-            $value = match($castType) {
+        if ($castType = $this->getCastType($key)) {
+            $value = match ($castType) {
                 'int', 'integer', 'timestamp' => (int) $value,
                 'real', 'float', 'double' => $this->fromFloat($value),
                 'string', 'decimal' => (string) $value,
@@ -185,14 +186,17 @@ trait HasAttributes
 
     public function toArray(): array
     {
-        return $this->attributes;
+        return [
+            ...['id' => $this->id],
+            ...$this->attributes
+        ];
     }
 
     public function toCastedArray(): array
     {
         $attributes = [];
 
-        foreach($this->toArray() as $index => $value) {
+        foreach ($this->toArray() as $index => $value) {
             $attributes[$index] = $this->setAttribute($index, $value);
         }
         return $attributes;
