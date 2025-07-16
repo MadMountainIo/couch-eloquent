@@ -32,7 +32,7 @@ class Builder
 
     public array $wheres = [];
 
-    public array $orders;
+    public array $orders = [];
 
     public int $limit;
 
@@ -295,7 +295,7 @@ class Builder
 
     protected function query(): QueryFactory
     {
-        return QueryFactory::load(WhereFactory::load($this->wheres));
+        return QueryFactory::load(WhereFactory::load($this->wheres), $this->orders);
     }
 
     public function get(): Collection

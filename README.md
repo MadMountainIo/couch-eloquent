@@ -69,6 +69,7 @@ class Item extends Model
 - firstOrFail
 - last
 - exists
+- orderBy
 
 ### Supported casts
 
