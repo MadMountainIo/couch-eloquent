@@ -37,7 +37,8 @@ use Sinemah\CouchEloquent\Eloquent\Model;
 
 class Item extends Model
 {
-    public string $database = 'items'
+    public string $database = 'items';
+
     protected $casts = [
         'name' => 'object',
     ];
