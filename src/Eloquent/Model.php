@@ -16,6 +16,7 @@ abstract class Model
 
     protected Collection $collection;
     public string $database;
+    public array $indexes = [];
 
     private ?string $_id = null;
     private ?string $_rev = null;
