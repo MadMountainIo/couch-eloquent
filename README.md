@@ -4,11 +4,15 @@ Lightweight CouchDB wrapper for Laravel. CouchEloquent has a similar syntax like
 Mango Query is used to process all requests.
 
 ## Installation
+
 ```
 composer require sinemah/coucheloquent
 ```
+
 ## Configuration
+
 Create a file named `couchdb.php` on your config folder or copy the included from vendor.
+
 ```php
 <?php
 
@@ -16,13 +20,14 @@ return [
     'session' => env('COUCHDB_SESSION', 300),
     'username' => env('COUCHDB_USER'),
     'password' => env('COUCHDB_PASSWORD'),
-    'database' => env('COUCHDB_DATABASE', 'laravel'),
     'url' => env('COUCHDB_URL', 'http://couchdb:5984'),
 ];
 ```
 
 ## Models
+
 Extend your model with `Sinemah\CouchEloquent\Eloquent\Model`. That's it.
+
 ```php
 <?php
 
@@ -32,46 +37,52 @@ use Sinemah\CouchEloquent\Eloquent\Model;
 
 class Item extends Model
 {
+    public string $database = 'items'
     protected $casts = [
-        'name' => 'json',
+        'name' => 'object',
     ];
-} 
+}
 ```
 
 ### Supported methods (model instance)
-* count
-* find
-* save
-* update
-* delete
-* get
-* toQuery
-* where
-* orWhere
-* whereNot
-* whereIn
-* whereNull
-* whereHas
-* whereBetween
-* first
-* last
-* exists
+
+- count
+- find
+- save
+- update
+- delete
+- get
+- toQuery
+- where
+- orWhere
+- whereNot
+- whereIn
+- whereNull
+- whereHas
+- whereBetween
+- first
+- firstOrFail
+- last
+- exists
 
 ### Supported casts
-* int
-* real
-* float
-* double 
-* decimal
-* string
-* bool
-* object
-* array
-* json
-* collection
+
+- int
+- real
+- float
+- double
+- decimal
+- string
+- bool
+- object
+- array
+- json
+- collection
 
 ## Usage
+
 ### Create document
+
 ```php
 use Ramsey\Uuid\Uuid;
 
@@ -88,10 +99,11 @@ $doc = Pet::create([
     ],
     'gender' => 'male',
     'breed' => 'Mastin-Mix'
-]); 
+]);
 ```
 
 ### Update document
+
 ```php
 $pet = $pets->first();
 $pet->name = [
