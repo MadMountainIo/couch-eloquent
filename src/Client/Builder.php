@@ -98,7 +98,7 @@ class Builder
     public function update(string $database, string $id, array $values): ?array
     {
         $date = Date::load(now());
-        $document = $this->find($id);
+        $document = $this->find($database, $id);
         $timestamps = [
             'created_at' => $document['created_at'] ?? $date->toArray(),
             'updated_at' => $date->toArray(),
@@ -130,7 +130,7 @@ class Builder
 
     public function delete(string $database, string $id): bool
     {
-        $document = $this->find($id);
+        $document = $this->find($database, $id);
 
         $response = $this->request()->delete($this->database($database, $id) . '?' . Arr::query(['rev' => $document['_rev'] ?? null]));
 
@@ -140,7 +140,7 @@ class Builder
     public function softDelete(string $database, string $id): bool
     {
         $date = Date::load(now());
-        $document = $this->find($id);
+        $document = $this->find($database, $id);
         $timestamps = [
             'created_at' => $document['created_at'] ?? $date->toArray(),
             'updated_at' => $document['updated_at'] ?? $date->toArray(),
