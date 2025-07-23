@@ -84,11 +84,11 @@ abstract class Model
             '_rev' => $this->_rev,
         ]);
 
-        if ($doc->find()) {
+        if ($doc->find($this->database)) {
             return $doc->update($this->toCastedArray());
         }
 
-        return Document::load($this->toCastedArray())->create();
+        return Document::load($this->toCastedArray())->create($this->database);
     }
 
     public function update(array $values = []): bool
@@ -106,7 +106,7 @@ abstract class Model
         return Document::load([
             '_id' => $this->_id,
             '_rev' => $this->_rev,
-        ])->delete();
+        ])->delete($this->database);
     }
 
     public function __call($method, $parameters): mixed
