@@ -85,7 +85,7 @@ abstract class Model
         ]);
 
         if ($doc->find($this->database)) {
-            return $doc->update($this->toCastedArray());
+            return $doc->update($this->database, $this->toCastedArray());
         }
 
         return Document::load($this->toCastedArray())->create($this->database);
