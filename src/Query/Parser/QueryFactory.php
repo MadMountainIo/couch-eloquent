@@ -9,16 +9,20 @@ class QueryFactory
 {
     protected DTO $data;
     protected array $orders;
+    protected array $fields = [];
+    protected int $limit = 50;
 
-    public static function load(Collection $wheres, array $orders): QueryFactory
+    public static function load(Collection $wheres, array $orders, ?array $fields = [], int $limit = 50): QueryFactory
     {
-        return new self($wheres->toQuery(), $orders);
+        return new self($wheres->toQuery(), $orders, $fields, $limit);
     }
 
-    private function __construct(?array $selector, $orders)
+    private function __construct(?array $selector, $orders, ?array $fields = [], int $limit = 50)
     {
         $this->data = new DTO(['selector' => $selector]);
+        $this->fields = $fields ?? [];
         $this->orders = $orders;
+        $this->limit = $limit;
     }
 
     public function toQuery(): ?array
@@ -35,6 +39,14 @@ class QueryFactory
 
         if ($query->has('sort') && !$query->has('selector')) {
             $query->put('selector', (object)[]);
+        }
+
+        if (!empty($this->fields)) {
+            $query->put('fields', $this->fields);
+        }
+
+        if ($this->limit > 0) {
+            $query->put('limit', $this->limit);
         }
 
         return $query->isEmpty() ? null : $query->toArray();
