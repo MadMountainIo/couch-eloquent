@@ -36,7 +36,7 @@ class Builder
 
     public array $fields = [];
 
-    public int $limit;
+    public int $limit = 50;
 
     public int $offset;
 
