@@ -34,6 +34,8 @@ class Builder
 
     public array $orders = [];
 
+    public array $fields = [];
+
     public int $limit;
 
     public int $offset;
@@ -153,6 +155,13 @@ class Builder
             'boolean' => $boolean,
             'not' => $not,
         ];
+
+        return $this;
+    }
+
+    public function select(array $fields = []): Builder
+    {
+        $this->fields = $fields;
 
         return $this;
     }
@@ -295,7 +304,7 @@ class Builder
 
     protected function query(): QueryFactory
     {
-        return QueryFactory::load(WhereFactory::load($this->wheres), $this->orders);
+        return QueryFactory::load(WhereFactory::load($this->wheres), $this->orders, $this->fields, $this->limit);
     }
 
     public function get(): Collection
@@ -315,17 +324,57 @@ class Builder
 
     public function delete(?string $id = null): int
     {
-        $deleted = 0;
         if (!is_null($id)) {
-            Document::load(['_id' => $id])->delete($this->getModel()->database);
+            $doc = Document::load(['_id' => $id]);
+            return (int) $doc->delete($this->getModel()->database);
         }
 
-        $this->get()
-            ->each(function (Document $doc) use (&$deleted) {
-                $deleted += (int) $doc->delete();
-            });
+        return $this->bulkDelete();
+    }
 
-        return $deleted;
+    /**
+     * Perform bulk delete operation using CouchDB's _bulk_docs endpoint
+     * 
+     * @return int Number of deleted documents
+     */
+    public function bulkDelete(): int
+    {
+        $documents = $this->get();
+
+        if ($documents->isEmpty()) {
+            return 0;
+        }
+
+        // Prepare documents for bulk deletion
+        $bulkDocs = $documents->map(function ($doc) {
+            return [
+                '_id' => $doc->getId(),
+                '_rev' => $doc->getRevision(),
+                '_deleted' => true
+            ];
+        })->toArray();
+
+        $builder = ClientBuilder::withConnection();
+        $response = $builder->request()->post(
+            $builder->database($this->getModel()->database, '_bulk_docs'),
+            [
+                'docs' => $bulkDocs
+            ]
+        );
+
+        if ($response->successful()) {
+            $results = $response->json();
+            // Count successful deletions (those without 'error' field)
+            $successCount = 0;
+            foreach ($results as $result) {
+                if (!isset($result['error'])) {
+                    $successCount++;
+                }
+            }
+            return $successCount;
+        }
+
+        return 0;
     }
 
     public function whereBetween(string $column, iterable $values, string $boolean = 'and', bool $not = false): Builder
