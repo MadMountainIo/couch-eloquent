@@ -11,18 +11,20 @@ class QueryFactory
     protected array $orders;
     protected array $fields = [];
     protected int $limit = 50;
+    protected int $offset = 0;
 
-    public static function load(Collection $wheres, array $orders, ?array $fields = [], int $limit = 50): QueryFactory
+    public static function load(Collection $wheres, array $orders, ?array $fields = [], int $limit = 50, int $offset = 0): QueryFactory
     {
-        return new self($wheres->toQuery(), $orders, $fields, $limit);
+        return new self($wheres->toQuery(), $orders, $fields, $limit, $offset);
     }
 
-    private function __construct(?array $selector, $orders, ?array $fields = [], int $limit = 50)
+    private function __construct(?array $selector, $orders, ?array $fields = [], int $limit = 50, int $offset = 0)
     {
         $this->data = new DTO(['selector' => $selector]);
         $this->fields = $fields ?? [];
         $this->orders = $orders;
         $this->limit = $limit;
+        $this->offset = $offset;
     }
 
     public function toQuery(): ?array
@@ -47,6 +49,10 @@ class QueryFactory
 
         if ($this->limit > 0) {
             $query->put('limit', $this->limit);
+        }
+
+        if ($this->offset > 0) {
+            $query->put('skip', $this->offset);
         }
 
         return $query->isEmpty() ? null : $query->toArray();
