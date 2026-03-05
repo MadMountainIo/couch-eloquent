@@ -114,7 +114,12 @@ class Builder
 
     public function count($columns = ['*']): int
     {
-        return $this->get()->count();
+        $originalLimit = $this->limit;
+        $this->limit = PHP_INT_MAX;
+        $result = $this->get()->count();
+        $this->limit = $originalLimit;
+
+        return $result;
     }
 
     public function update(array $values, array $options = []): bool
@@ -304,7 +309,7 @@ class Builder
 
     protected function query(): QueryFactory
     {
-        return QueryFactory::load(WhereFactory::load($this->wheres), $this->orders, $this->fields, $this->limit);
+        return QueryFactory::load(WhereFactory::load($this->wheres), $this->orders, $this->fields, $this->limit, $this->offset ?? 0);
     }
 
     public function get(): Collection
